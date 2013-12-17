@@ -1,49 +1,67 @@
 # 
 # John Gerick , Fred Brockstedt 2013 hu-berlin.de
 #
-source("ProgressBar.R")
+if (!"doMC" %in% installed.packages()) install.packages("doMC", repos='http://cran.us.r-project.org')
+library("doMC")
+registerDoMC(4)
+
+source("NWE.R")
 
 
 ##load library
 library("EBImage")
 
 ##read JPG Image
-katze <- readImage("katze.jpg")
+image <- readImage("katze.jpg")
+imageComb <- image
 
-## change Image to Greyscale
-colorMode(katze) <- "Grayscale"
+##create normally distributed distortion
+standardDiv <- 8/20   ##########     <<<<----    #########STÖRUNG VARIATION MÖGLICH####################
+distortion <- matrix(rnorm((nrow(image)*ncol(image)),mean=0,sd=standardDiv),nrow=nrow(image))
 
-## use the first Greyscale generated
-katze <- katze[,,1]
-
-## show the Image
-##display(katze)
-
-kaComb <- katze
-for (k in 1:50) {
-ProgressBar(100*k/50)
-
-##normalverteiltes rauschen erzeugen
-standardDiv <- k/50
-stoer <- matrix(rnorm((nrow(katze)*ncol(katze)),mean=0,sd=standardDiv),nrow=nrow(katze))
-
-##Bild stoeren
-katzeMS <- katze+stoer
-kaComb <- combine(kaComb,katzeMS)
-}
-
-
-cat("\n")
-##show all Images
-
-display(kaComb)
-
-
-
-
-
-
+##distort image
+imageWithDistortion <- image
+imageWithDistortion[,,1] <- image[,,1]+distortion
+imageWithDistortion[,,2] <- image[,,2]+distortion
+imageWithDistortion[,,3] <- image[,,3]+distortion
 
 
 ##GaussKern
-GaussKern <- function(x) {return exp((x*x)/(-2))/sqrt(2*pi) }
+GaussKern <- function(x) {
+  return(exp((x*x)/(-2))/sqrt(2*pi)) 
+  }
+  
+##SquareKern
+SquareKern <- function(x) {
+  if (abs(x)<=1) {return(0.5)}
+  else {return(0)}
+  }
+
+##TriangleKern
+TriangleKern <- function(x) {
+  if (abs(x)<=1) {return(1-abs(x))}
+  else {return(0)}
+  }
+
+##EpanechnikovKern
+EpanechnikovKern <- function(x) {
+  if (abs(x)<=1) {return((3-3*(x*x))/4)}
+  else {return(0)}
+  }
+
+
+for (bandWidth in c(0.1,0.5,1,2)){
+  foreach (kern = c("GaussKern", "SquareKern", "TriangleKern", "EpanechnikovKern")) %dopar% {
+    funKern <- get(kern)
+    blurImage <- NWE(imageWithDistortion,funKern,bandWidth)
+    writeImage(blurImage,sprintf("output/%s-%3.5f.jpg", kern, bandWidth))
+  }
+}
+
+
+
+
+##show Images
+
+imageComb <- combine(imageComb,imageWithDistortion)
+display(imageComb)
