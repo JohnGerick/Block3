@@ -30,7 +30,8 @@ NWE <- function(matrix,KernFunction,bandWidth){
 
         for (zeil in 1:z){
                 for (spal in 1:s){
-                        nmat[zeil,spal] <- sum(matrix*Kh[(z+1-zeil):(2*z-zeil),(s+1-spal):(2*s-spal)] )/sum(Kh[(z+1-zeil):(2*z-zeil),(s+1-spal):(2*s-spal)] )
+                    tmp <- Kh[(z+1-zeil):(2*z-zeil),(s+1-spal):(2*s-spal)]
+                    nmat[zeil,spal] <- sum(matrix * tmp)/sum(tmp)
                 }
         }
 
