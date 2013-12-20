@@ -50,10 +50,16 @@ EpanechnikovKern <- function(x) {
   }
 
 
+## creates smothed pictures
+
+
 for (bandWidth in c(0.1,0.5,1,2)){
   foreach (kern = c("GaussKern", "SquareKern", "TriangleKern", "EpanechnikovKern")) %dopar% {
     funKern <- get(kern)
-    blurImage <- NWE(imageWithDistortion,funKern,bandWidth)
+    blurImage <- imageWithDistortion
+    for (color in 1:3){
+      blurImage[,,color] <- NWE(imageWithDistortion[,,color],funKern,bandWidth)
+    }
     writeImage(blurImage,sprintf("output/%s-%3.5f.jpg", kern, bandWidth))
   }
 }
